@@ -1,56 +1,63 @@
-import React, {useEffect, useMemo} from 'react';
-import {Box} from "@mui/material";
-import {documentDefaultTitle} from "../../appConfig";
-import SearchBanner from "../../components/public/SearchBanner";
-import MovieTapeSection from "../../components/public/MovieTapeSection";
-import useFetchMovies from "../../hooks/fetchMovies";
+import React, { useEffect } from 'react';
+import { Box } from '@mui/material';
+import { documentDefaultTitle } from '../../appConfig';
+import SearchBanner from '../../components/public/SearchBanner';
+import MovieTapeSection from '../../components/public/MovieTapeSection';
+import { useAppDispatch, useAppSelector } from '../../hooks/store';
+import { fetchTopRatedMovies } from '../../store/movies/topRatedMovies';
+import { fetchMostPopularMovies } from '../../store/movies/mostPopularMovies';
 
 const topRatedMoviesParams = {
-    orderField: 'rating',
-    orderDir: 'desc',
+  orderField: 'rating',
+  orderDir: 'desc',
 };
 
 const mostPopularMoviesParams = {
-    orderField: 'rateNumber',
-    orderDir: 'desc',
+  orderField: 'rateNumber',
+  orderDir: 'desc',
 };
 
 const HomePage: React.FC = () => {
-    const {
-        movies: topRatedMovies,
-        isLoading: isTopRatedMoviesLoading,
-        error: topRatedMoviesError
-    } = useFetchMovies(topRatedMoviesParams);
+  const dispatch = useAppDispatch();
 
-    const {
-        movies: mostPopularMovies,
-        isLoading: isMostPopularMoviesLoading,
-        error: mostPopularMoviesError
-    } = useFetchMovies(mostPopularMoviesParams);
+  const {
+    items: topRatedMovies,
+    isLoading: isTopRatedMoviesLoading,
+    error: topRatedMoviesError,
+  } = useAppSelector((state) => state.topRatedMovies);
 
-    useEffect(() => {
-        document.title = documentDefaultTitle;
-    }, []);
+  const {
+    items: mostPopularMovies,
+    isLoading: isMostPopularMoviesLoading,
+    error: mostPopularMoviesError,
+  } = useAppSelector((state) => state.mostPopularMovies);
 
-    return (
-        <Box component="main">
-            <SearchBanner/>
+  useEffect(() => {
+    document.title = documentDefaultTitle;
 
-            <MovieTapeSection
-                sectionTitle="Фильмы с высоким рейтингом"
-                movies={topRatedMovies}
-                isLoading={isTopRatedMoviesLoading}
-                error={topRatedMoviesError}
-            />
+    dispatch(fetchTopRatedMovies(topRatedMoviesParams));
+    dispatch(fetchMostPopularMovies(mostPopularMoviesParams));
+  }, [dispatch]);
 
-            <MovieTapeSection
-                sectionTitle="Популярные фильмы"
-                movies={mostPopularMovies}
-                isLoading={isMostPopularMoviesLoading}
-                error={mostPopularMoviesError}
-            />
-        </Box>
-    );
+  return (
+    <Box component="main">
+      <SearchBanner />
+
+      <MovieTapeSection
+        sectionTitle="Фильмы с высоким рейтингом"
+        movies={topRatedMovies}
+        isLoading={isTopRatedMoviesLoading}
+        error={topRatedMoviesError}
+      />
+
+      <MovieTapeSection
+        sectionTitle="Популярные фильмы"
+        movies={mostPopularMovies}
+        isLoading={isMostPopularMoviesLoading}
+        error={mostPopularMoviesError}
+      />
+    </Box>
+  );
 };
 
 export default HomePage;

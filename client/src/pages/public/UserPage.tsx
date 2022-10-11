@@ -1,73 +1,85 @@
-import React, {useState} from 'react';
+import React, { useEffect, useState } from 'react';
 import {
-    Alert,
-    Box,
-    Breadcrumbs,
-    CircularProgress,
-    Container,
-    Link,
-    Typography
-} from "@mui/material";
-import {Link as RouterLink} from "react-router-dom";
-import useFetchUser from "../../hooks/fetchUser";
-import {useAuth} from "../../auth/useAuth";
-import UserForm from "../../components/public/UserForm";
-import * as userService from "../../services/userService";
-import {User} from "../../types/user";
+  Alert,
+  Box,
+  Breadcrumbs,
+  CircularProgress,
+  Container,
+  Link,
+  Typography,
+} from '@mui/material';
+import { Link as RouterLink } from 'react-router-dom';
+import UserForm from '../../components/public/UserForm';
+import * as userService from '../../services/userService';
+import { User } from '../../types/user';
+import { useAppDispatch, useAppSelector } from '../../hooks/store';
+import { fetchUser } from '../../store/user';
 
 const UserPage: React.FC = () => {
-    const {user: userAuth} = useAuth();
-    const {user, isLoading, error: loadingError} = useFetchUser(userAuth!.id);
+  const userAuth = useAppSelector((state) => state.auth);
+  const {
+    entity: user,
+    isLoading,
+    error: loadingError,
+  } = useAppSelector((state) => state.user);
+  const dispatch = useAppDispatch();
 
-    const [isSaving, setIsSaving] = useState(false);
-    const [savingError, setSavingError] = useState<string>('');
+  useEffect(() => {
+    dispatch(fetchUser(userAuth!.id));
+  }, [dispatch, userAuth]);
 
-    const handleSave = async (user: User, profileFile: File | null) => {
-        setIsSaving(true);
-        setSavingError('');
-        try {
-            const updateData: User = {
-                id: userAuth!.id,
-                ...user,
-            };
-            await userService.update(updateData, profileFile);
-        } catch (error) {
-            if (typeof error === 'string') {
-                setSavingError(error);
-            } else if (error instanceof Error) {
-                setSavingError(error.message);
-            }
-        } finally {
-            setIsSaving(false);
-        }
-    };
+  const [isSaving, setIsSaving] = useState(false);
+  const [savingError, setSavingError] = useState<string>('');
 
-    return (
-        <Box component="main">
-            <Container>
-                <Breadcrumbs aria-label="breadcrumb" sx={{py: 2}}>
-                    <Link component={RouterLink} underline="hover" color="inherit" to="/">
-                        Главная
-                    </Link>
-                    <Typography color="text.primary">
-                        Профиль
-                    </Typography>
+  const handleSave = async (user: User, profileFile: File | null) => {
+    setIsSaving(true);
+    setSavingError('');
+    try {
+      const updateData: User = {
+        id: userAuth!.id,
+        ...user,
+      };
+      await userService.update(updateData, profileFile);
+    } catch (error) {
+      if (typeof error === 'string') {
+        setSavingError(error);
+      } else if (error instanceof Error) {
+        setSavingError(error.message);
+      }
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
-                </Breadcrumbs>
+  return (
+    <Box component="main">
+      <Container>
+        <Breadcrumbs aria-label="breadcrumb" sx={{ py: 2 }}>
+          <Link component={RouterLink} underline="hover" color="inherit" to="/">
+            Главная
+          </Link>
+          <Typography color="text.primary">Профиль</Typography>
+        </Breadcrumbs>
 
-                {isLoading &&
-                <Box sx={{textAlign: 'center'}}>
-                    <CircularProgress/>
-                </Box>
-                }
+        {isLoading && (
+          <Box sx={{ textAlign: 'center' }}>
+            <CircularProgress />
+          </Box>
+        )}
 
-                {loadingError && <Alert severity="error">{loadingError}</Alert>}
+        {loadingError && <Alert severity="error">{loadingError}</Alert>}
 
-                {user && <UserForm user={user} isSaving={isSaving} onSave={handleSave}/>}
-                {savingError && <Alert severity="error" sx={{mt: 2}}>{savingError}</Alert>}
-            </Container>
-        </Box>
-    );
+        {user && (
+          <UserForm user={user} isSaving={isSaving} onSave={handleSave} />
+        )}
+        {savingError && (
+          <Alert severity="error" sx={{ mt: 2 }}>
+            {savingError}
+          </Alert>
+        )}
+      </Container>
+    </Box>
+  );
 };
 
 export default UserPage;

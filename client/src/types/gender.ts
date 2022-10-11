@@ -1,4 +1,4 @@
 export enum Gender {
-    female,
-    male
+  female,
+  male,
 }

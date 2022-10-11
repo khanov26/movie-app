@@ -1,13 +1,13 @@
 import React, {ReactElement} from 'react';
-import {Navigate, Outlet, useLocation} from "react-router-dom";
-import {useAuth} from "./useAuth";
+import {Navigate, useLocation} from "react-router-dom";
+import { useAppSelector } from '../hooks/store';
 
 interface Props {
     children: ReactElement;
 }
 
 const RequireAuth: React.FC<Props> = ({children}) => {
-    const {user} = useAuth();
+    const user = useAppSelector(state => state.auth);
     const location = useLocation();
 
     return (

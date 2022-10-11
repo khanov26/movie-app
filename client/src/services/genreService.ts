@@ -1,6 +1,6 @@
-import api from "./api";
+import api from './api';
 
 export const getAll = async () => {
-    const response = await api.get<string[]>('/genres');
-    return response.data;
+  const response = await api.get<string[]>('/genres');
+  return response.data;
 };

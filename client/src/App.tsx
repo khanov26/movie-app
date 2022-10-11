@@ -1,15 +1,17 @@
-import React, {useEffect} from 'react';
+import {useEffect} from 'react';
 import {useLocation, useRoutes} from "react-router-dom";
 import {CssBaseline} from "@mui/material";
 import adminRoutes from "./routes/adminRoutes";
 import publicRoutes from "./routes/publicRoutes";
-import {useAuth} from "./auth/useAuth";
+import { useAppDispatch, useAppSelector } from './hooks/store';
+import { logout } from './store/auth';
 
 function App() {
     const routes = useRoutes([...adminRoutes, ...publicRoutes]);
 
     const {pathname} = useLocation();
-    const {user, logout} = useAuth();
+    const user = useAppSelector(state => state.auth);
+    const dispatch = useAppDispatch();
 
     useEffect(() => {
         // check token expiration
@@ -17,9 +19,9 @@ function App() {
             return;
         }
         if (user.exp * 1000 < Date.now()) {
-            logout();
+            dispatch(logout());
         }
-    }, [pathname]);
+    }, [dispatch, pathname, user]);
 
     return (
         <>

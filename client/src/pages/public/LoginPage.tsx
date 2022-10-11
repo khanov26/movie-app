@@ -1,122 +1,158 @@
-import React, {useState} from 'react';
-import {Alert, Box, Button, CircularProgress, Link, TextField, Typography} from "@mui/material";
-import useInput from "../../hooks/input";
-import {useAuth} from "../../auth/useAuth";
-import {Navigate, useLocation, useNavigate, Link as RouterLink} from "react-router-dom";
+import React, { useState } from 'react';
+import {
+  Alert,
+  Box,
+  Button,
+  CircularProgress,
+  Link,
+  TextField,
+  Typography,
+} from '@mui/material';
+import useInput from '../../hooks/input';
+import {
+  Navigate,
+  useLocation,
+  useNavigate,
+  Link as RouterLink,
+} from 'react-router-dom';
+import { useAppDispatch, useAppSelector } from '../../hooks/store';
+import { login } from '../../store/auth';
 
 interface LocationState {
-    from: Location;
+  from: Location;
 }
 
 interface LoginError {
-    field: string;
-    errorText: string;
+  field: string;
+  errorText: string;
 }
 
 const LoginPage: React.FC = () => {
-    const email = useInput('');
-    const password = useInput('');
+  const email = useInput('');
+  const password = useInput('');
 
-    const {user, login} = useAuth();
-    const location = useLocation();
-    const navigate = useNavigate();
+  const auth = useAppSelector((state) => state.auth);
+  const dispatch = useAppDispatch();
+  const location = useLocation();
+  const navigate = useNavigate();
 
-    const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
 
-    const [loginError, setLoginError] = useState<LoginError | null>(null);
+  const [loginError, setLoginError] = useState<LoginError | null>(null);
 
-    const validateFields = () => {
-        return [email.value, password.value].every(value => value !== '');
-    };
+  const validateFields = () => {
+    return [email.value, password.value].every((value) => value !== '');
+  };
 
-    const canLogin = !isLoading && validateFields();
+  const canLogin = !isLoading && validateFields();
 
-    const handleSubmit = async () => {
-        setLoginError(null);
-        setError('');
+  const handleSubmit = async () => {
+    setLoginError(null);
+    setError('');
 
-        setIsLoading(true);
-        try {
-            await login(email.value, password.value);
-            const from = (location.state as LocationState)?.from?.pathname || '/';
-            navigate(from, {replace: true});
-        } catch (error) {
-            if (typeof error === 'object' && 'field' in error!) {
-                setLoginError(error);
-            } else if (typeof error === 'string') {
-                setError(error);
-            }
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    if (user) {
-        const from = (location.state as LocationState)?.from?.pathname || '/';
-        return <Navigate to={from} replace/>;
+    setIsLoading(true);
+    try {
+      await dispatch(
+        login({ email: email.value, password: password.value })
+      ).unwrap();
+      const from = (location.state as LocationState)?.from?.pathname || '/';
+      navigate(from, { replace: true });
+    } catch (error) {
+      if (typeof error === 'object' && 'field' in error!) {
+        setLoginError(error);
+      } else if (typeof error === 'string') {
+        setError(error);
+      }
+    } finally {
+      setIsLoading(false);
     }
+  };
 
-    return (
-        <Box component="main" sx={{
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            p: 2,
-        }}>
-            <Box sx={{
-                maxWidth: 600
-            }}>
-                <Typography variant="h4" sx={{mb: 2, textAlign: 'center'}}>Войти</Typography>
-                <Box component="form">
-                    <TextField
-                        required
-                        fullWidth
-                        label="Email"
-                        value={email.value}
-                        onChange={email.onChange}
-                        disabled={isLoading}
-                        error={loginError?.field === 'email'}
-                        helperText={loginError?.field === 'email' && loginError.errorText}
-                    />
+  if (auth) {
+    const from = (location.state as LocationState)?.from?.pathname || '/';
+    return <Navigate to={from} replace />;
+  }
 
-                    <TextField
-                        required
-                        type="password"
-                        fullWidth
-                        sx={{mt: 2}}
-                        label="Пароль"
-                        value={password.value}
-                        onChange={password.onChange}
-                        disabled={isLoading}
-                        error={loginError?.field === 'password'}
-                        helperText={loginError?.field === 'password' && loginError.errorText}
-                    />
+  return (
+    <Box
+      component="main"
+      sx={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        p: 2,
+      }}
+    >
+      <Box
+        sx={{
+          maxWidth: 600,
+        }}
+      >
+        <Typography variant="h4" sx={{ mb: 2, textAlign: 'center' }}>
+          Войти
+        </Typography>
+        <Box component="form">
+          <TextField
+            required
+            fullWidth
+            label="Email"
+            value={email.value}
+            onChange={email.onChange}
+            disabled={isLoading}
+            error={loginError?.field === 'email'}
+            helperText={loginError?.field === 'email' && loginError.errorText}
+          />
 
-                    {error && <Alert severity="error" sx={{mt: 2}}>{error}</Alert>}
+          <TextField
+            required
+            type="password"
+            fullWidth
+            sx={{ mt: 2 }}
+            label="Пароль"
+            value={password.value}
+            onChange={password.onChange}
+            disabled={isLoading}
+            error={loginError?.field === 'password'}
+            helperText={
+              loginError?.field === 'password' && loginError.errorText
+            }
+          />
 
-                    <Button
-                        variant="contained"
-                        size="large"
-                        sx={{mt: 2, width: '100%'}}
-                        disabled={!canLogin}
-                        onClick={handleSubmit}
-                    >
-                        {isLoading && <CircularProgress color="inherit" size={20} sx={{mr: 1}}/>}
-                        Войти
-                    </Button>
-                </Box>
+          {error && (
+            <Alert severity="error" sx={{ mt: 2 }}>
+              {error}
+            </Alert>
+          )}
 
-                <Box sx={{
-                    display: 'flex',
-                    justifyContent: 'flex-end',
-                    mt: 2,
-                }}>
-                    <Link component={RouterLink} to="/signup" underline="hover">Регистрация</Link>
-                </Box>
-            </Box>
+          <Button
+            variant="contained"
+            size="large"
+            sx={{ mt: 2, width: '100%' }}
+            disabled={!canLogin}
+            onClick={handleSubmit}
+          >
+            {isLoading && (
+              <CircularProgress color="inherit" size={20} sx={{ mr: 1 }} />
+            )}
+            Войти
+          </Button>
         </Box>
-    );
+
+        <Box
+          sx={{
+            display: 'flex',
+            justifyContent: 'flex-end',
+            mt: 2,
+          }}
+        >
+          <Link component={RouterLink} to="/signup" underline="hover">
+            Регистрация
+          </Link>
+        </Box>
+      </Box>
+    </Box>
+  );
 };
 
 export default LoginPage;
