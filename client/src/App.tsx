@@ -1,34 +1,34 @@
-import {useEffect} from 'react';
-import {useLocation, useRoutes} from "react-router-dom";
-import {CssBaseline} from "@mui/material";
-import adminRoutes from "./routes/adminRoutes";
-import publicRoutes from "./routes/publicRoutes";
+import { useEffect } from 'react';
+import { useLocation, useRoutes } from 'react-router-dom';
+import { CssBaseline } from '@mui/material';
+import adminRoutes from './routes/adminRoutes';
+import publicRoutes from './routes/publicRoutes';
 import { useAppDispatch, useAppSelector } from './hooks/store';
-import { logout } from './store/auth';
+import { logout } from './store/auth/authSlice';
 
 function App() {
-    const routes = useRoutes([...adminRoutes, ...publicRoutes]);
+  const routes = useRoutes([...adminRoutes, ...publicRoutes]);
 
-    const {pathname} = useLocation();
-    const user = useAppSelector(state => state.auth);
-    const dispatch = useAppDispatch();
+  const { pathname } = useLocation();
+  const user = useAppSelector((state) => state.auth);
+  const dispatch = useAppDispatch();
 
-    useEffect(() => {
-        // check token expiration
-        if (!user) {
-            return;
-        }
-        if (user.exp * 1000 < Date.now()) {
-            dispatch(logout());
-        }
-    }, [dispatch, pathname, user]);
+  useEffect(() => {
+    // check token expiration
+    if (!user) {
+      return;
+    }
+    if (user.exp * 1000 < Date.now()) {
+      dispatch(logout());
+    }
+  }, [dispatch, pathname, user]);
 
-    return (
-        <>
-            <CssBaseline/>
-            {routes}
-        </>
-    );
+  return (
+    <>
+      <CssBaseline />
+      {routes}
+    </>
+  );
 }
 
 export default App;

@@ -13,30 +13,26 @@ import { documentDefaultTitle } from '../../appConfig';
 import TapeLoader from '../../components/public/TapeLoader';
 import MovieInfo from '../../components/public/MovieInfo';
 import MovieCharacters from '../../components/public/MovieCharacters';
-import { useAppDispatch, useAppSelector } from '../../hooks/store';
-import { fetchMovie } from '../../store/movie';
-import { fetchCharacters } from '../../store/characters';
+import { useGetCharactersQuery } from '../../store/characters/charactersSlice';
+import { useGetMovieQuery } from '../../store/movies/moviesSlice';
+import { parseRTKQueryError } from '../../utils/error';
 
 const MoviePage: React.FC = () => {
   const { movieId } = useParams();
 
   const {
-    entity: movie,
+    data: movie,
     isLoading: isMovieLoading,
+    isError: isMovieError,
     error: movieError,
-  } = useAppSelector((state) => state.movie);
+  } = useGetMovieQuery(movieId!);
+
   const {
-    items: characters,
+    data: characters = [],
     isLoading: isCharactersLoading,
+    isError: isCharactersError,
     error: charactersError,
-  } = useAppSelector((state) => state.characters);
-
-  const dispatch = useAppDispatch();
-
-  useEffect(() => {
-    dispatch(fetchMovie(movieId!));
-    dispatch(fetchCharacters({ movieId }));
-  }, [dispatch, movieId]);
+  } = useGetCharactersQuery({ movieId: movieId! });
 
   useEffect(() => {
     if (movie) {
@@ -57,8 +53,12 @@ const MoviePage: React.FC = () => {
         <Skeleton variant="rectangular" sx={{ height: 400 }} />
       </Container>
     );
-  } else if (movieError) {
-    movieContent = <Alert severity="error">{movieError}</Alert>;
+  } else if (isMovieError) {
+    movieContent = (
+      <Alert severity="error">
+        {parseRTKQueryError(movieError) as string}
+      </Alert>
+    );
   } else if (movie) {
     movieContent = <MovieInfo movie={movie} />;
   }
@@ -70,8 +70,12 @@ const MoviePage: React.FC = () => {
         <TapeLoader />
       </Container>
     );
-  } else if (charactersError) {
-    charactersContent = <Alert severity="error">{charactersError}</Alert>;
+  } else if (isCharactersError) {
+    charactersContent = (
+      <Alert severity="error">
+        {parseRTKQueryError(charactersError) as string}
+      </Alert>
+    );
   } else if (characters.length > 0) {
     charactersContent = <MovieCharacters characters={characters} />;
   }

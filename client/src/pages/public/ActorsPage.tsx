@@ -11,21 +11,11 @@ import {
 import { Link as RouterLink } from 'react-router-dom';
 import ActorsGrid from '../../components/public/ActorsGrid';
 import { documentDefaultTitle } from '../../appConfig';
-import { useAppDispatch, useAppSelector } from '../../hooks/store';
-import { fetchActors } from '../../store/actors';
+import { useGetActorsQuery } from '../../store/actors/actorsSlice';
+import { parseRTKQueryError } from '../../utils/error';
 
 const ActorsPage: React.FC = () => {
-  const {
-    items: actors,
-    isLoading,
-    error,
-  } = useAppSelector((state) => state.actors);
-
-  const dispatch = useAppDispatch();
-
-  useEffect(() => {
-    dispatch(fetchActors());
-  }, [dispatch]);
+  const { data: actors = [], isLoading, error, isError } = useGetActorsQuery();
 
   let actorsContent;
   if (isLoading) {
@@ -34,10 +24,12 @@ const ActorsPage: React.FC = () => {
         <CircularProgress />
       </Box>
     );
-  } else if (error) {
+  } else if (isError) {
     actorsContent = (
       <Container>
-        <Alert severity="error">{error}</Alert>
+        <Alert severity="error">
+          {parseRTKQueryError(error) as string}
+        </Alert>
       </Container>
     );
   } else if (actors.length > 0) {

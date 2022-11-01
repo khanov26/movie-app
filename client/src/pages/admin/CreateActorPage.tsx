@@ -1,20 +1,25 @@
 import React, { useState } from 'react';
 import useSnackbar from '../../hooks/snackbar';
-import * as actorService from '../../services/actorService';
 import { Box, Link, Typography } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
 import { Actor } from '../../types/actor';
 import ActorForm from '../../components/admin/ActorForm';
 import { FormType } from '../../types/form';
+import { useAddActorMutation } from '../../store/actors/actorsSlice';
 
 const CreateActorPage: React.FC = () => {
   const { openSnackbar, snackbar } = useSnackbar();
   const [isSaving, setIsSaving] = useState(false);
 
+  const [addActor] = useAddActorMutation();
+
   const createActor = async (actor: Actor, profileFile: File | null) => {
     setIsSaving(true);
     try {
-      const createdActor: Actor = await actorService.create(actor, profileFile);
+      const createdActor = await addActor({
+        actor,
+        profile: profileFile,
+      }).unwrap();
 
       const message = (
         <Typography>

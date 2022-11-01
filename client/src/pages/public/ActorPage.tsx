@@ -13,28 +13,23 @@ import ActorInfo from '../../components/public/ActorInfo';
 import TapeLoader from '../../components/public/TapeLoader';
 import ActorCharacters from '../../components/public/ActorCharacters';
 import { documentDefaultTitle } from '../../appConfig';
-import { useAppDispatch, useAppSelector } from '../../hooks/store';
-import { fetchCharacters } from '../../store/characters';
-import { fetchActor } from '../../store/actor';
+import { useGetActorQuery } from '../../store/actors/actorsSlice';
+import { useGetCharactersQuery } from '../../store/characters/charactersSlice';
+import { parseRTKQueryError } from '../../utils/error';
 
 const ActorPage: React.FC = () => {
   const { actorId } = useParams();
-  const dispatch = useAppDispatch();
   const {
-    entity: actor,
+    data: actor,
     isLoading: isActorLoading,
     error: actorError,
-  } = useAppSelector((state) => state.actor);
+  } = useGetActorQuery(actorId!);
   const {
-    items: characters,
+    data: characters = [],
     isLoading: isCharactersLoading,
+    isError: isCharactersError,
     error: charactersError,
-  } = useAppSelector((state) => state.characters);
-
-  useEffect(() => {
-    dispatch(fetchActor(actorId!));
-    dispatch(fetchCharacters({ actorId }));
-  }, [actorId, dispatch]);
+  } = useGetCharactersQuery({ actorId: actorId! });
 
   useEffect(() => {
     if (actor) {
@@ -52,7 +47,11 @@ const ActorPage: React.FC = () => {
       </Container>
     );
   } else if (actorError) {
-    actorContent = <Alert severity="error">{actorError}</Alert>;
+    actorContent = (
+      <Alert severity="error">
+        {parseRTKQueryError(actorError) as string}
+      </Alert>
+    );
   } else if (actor) {
     actorContent = <ActorInfo actor={actor} />;
   }
@@ -64,8 +63,12 @@ const ActorPage: React.FC = () => {
         <TapeLoader />
       </Container>
     );
-  } else if (charactersError) {
-    charactersContent = <Alert severity="error">{charactersError}</Alert>;
+  } else if (isCharactersError) {
+    charactersContent = (
+      <Alert severity="error">
+        {parseRTKQueryError(charactersError) as string}
+      </Alert>
+    );
   } else if (characters.length > 0) {
     charactersContent = <ActorCharacters characters={characters} />;
   }

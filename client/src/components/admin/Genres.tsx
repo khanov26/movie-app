@@ -1,7 +1,6 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Autocomplete, TextField } from '@mui/material';
-import { useAppDispatch, useAppSelector } from '../../hooks/store';
-import { fetchGenres } from '../../store/genres';
+import { useGetGenresQuery } from '../../store/genres/genresSlice';
 
 interface Props {
   selectedGenres: string[];
@@ -14,12 +13,7 @@ const Genres: React.FC<Props> = ({
   onChange,
   isDisabled = false,
 }) => {
-  const genres = useAppSelector((state) => state.genres.items);
-  const dispatch = useAppDispatch();
-
-  useEffect(() => {
-    dispatch(fetchGenres());
-  }, [dispatch]);
+  const { data: genres = [] } = useGetGenresQuery();
 
   return (
     <Autocomplete

@@ -1,11 +1,10 @@
-import React, { ChangeEvent, useEffect, useMemo, useState } from 'react';
+import React, { ChangeEvent, useState } from 'react';
 import {
   Accordion,
   AccordionDetails,
   AccordionSummary,
   Box,
   Chip,
-  debounce,
   Divider,
   FormControl,
   FormLabel,
@@ -20,24 +19,18 @@ import {
 import { ExpandMore } from '@mui/icons-material';
 import { FilterValue, MovieSearchParams } from '../../types/movie';
 import { getRuntimeLabel } from '../../utils/date';
-import { useAppDispatch, useAppSelector } from '../../hooks/store';
-import { fetchGenres } from '../../store/genres';
+import { useGetGenresQuery } from '../../store/genres/genresSlice';
 
 interface Props {
   searchParams: MovieSearchParams;
-  onSearchParamsUpdates: (filterValue: FilterValue) => void;
+  onSearchParamsUpdate: (filterValue: FilterValue) => void;
 }
 
 const MovieFilters: React.FC<Props> = ({
   searchParams,
-  onSearchParamsUpdates,
+  onSearchParamsUpdate,
 }) => {
-  const allGenres = useAppSelector((state) => state.genres.items);
-  const dispatch = useAppDispatch();
-
-  useEffect(() => {
-    dispatch(fetchGenres());
-  }, [dispatch]);
+  const { data: allGenres = [] } = useGetGenresQuery();
 
   const selectedGenres = (searchParams.genres as string[]) || [];
   const handleGenreClick = (genre: string) => () => {
@@ -49,15 +42,18 @@ const MovieFilters: React.FC<Props> = ({
     } else {
       newGenres = [...selectedGenres, genre];
     }
-    onSearchParamsUpdates({
+    onSearchParamsUpdate({
       updateField: 'genres',
       updateValue: newGenres.length > 0 ? newGenres : null,
     });
   };
 
-  const maxRating = (searchParams.maxRating as number) || 10;
-  const minRating = (searchParams.minRating as number) || 0;
-  const [rating, setRating] = useState([minRating, maxRating]);
+  const [rating, setRating] = useState(() => {
+    const maxRating = (searchParams.maxRating as number) || 10;
+    const minRating = (searchParams.minRating as number) || 0;
+
+    return [minRating, maxRating];
+  });
   const isRatingFilterActive = rating[0] !== 0 || rating[1] !== 10;
 
   const handleRatingChangeCommitted = (
@@ -65,20 +61,23 @@ const MovieFilters: React.FC<Props> = ({
     value: number | number[]
   ) => {
     const [minRating, maxRating] = value as number[];
-    onSearchParamsUpdates({
+    onSearchParamsUpdate({
       updateField: 'minRating',
       updateValue: minRating > 0 ? minRating : null,
     });
-    onSearchParamsUpdates({
+    onSearchParamsUpdate({
       updateField: 'maxRating',
       updateValue: maxRating < 10 ? maxRating : null,
     });
-    onSearchParamsUpdates({ updateField: 'orderField', updateValue: 'rating' });
+    onSearchParamsUpdate({ updateField: 'orderField', updateValue: 'rating' });
   };
 
-  const minRuntime = (searchParams.minRuntime as number) || 0;
-  const maxRuntime = (searchParams.maxRuntime as number) || 360;
-  const [runtime, setRuntime] = useState([minRuntime, maxRuntime]);
+  const [runtime, setRuntime] = useState(() => {
+    const minRuntime = (searchParams.minRuntime as number) || 0;
+    const maxRuntime = (searchParams.maxRuntime as number) || 360;
+
+    return [minRuntime, maxRuntime];
+  });
   const isRuntimeFilterActive = runtime[0] !== 0 || runtime[1] !== 360;
 
   const handleRuntimeChangeCommitted = (
@@ -86,28 +85,31 @@ const MovieFilters: React.FC<Props> = ({
     value: number | number[]
   ) => {
     let [minRuntime, maxRuntime] = value as number[];
-    onSearchParamsUpdates({
+    onSearchParamsUpdate({
       updateField: 'minRuntime',
       updateValue: minRuntime > 0 ? minRuntime : null,
     });
-    onSearchParamsUpdates({
+    onSearchParamsUpdate({
       updateField: 'maxRuntime',
       updateValue: maxRuntime < 360 ? maxRuntime : null,
     });
-    onSearchParamsUpdates({
+    onSearchParamsUpdate({
       updateField: 'orderField',
       updateValue: 'runtime',
     });
   };
+  
+  const [minReleaseYear, setMinReleaseYear] = useState(() => {
+    const minReleaseDate = (searchParams.minReleaseDate as number) || 0;
 
-  const minReleaseDate = (searchParams.minReleaseDate as number) || 0;
-  const maxReleaseDate = (searchParams.maxReleaseDate as number) || 0;
-  const [minReleaseYear, setMinReleaseYear] = useState(
-    minReleaseDate ? new Date(minReleaseDate).getFullYear() : ''
-  );
-  const [maxReleaseYear, setMaxReleaseYear] = useState(
-    maxReleaseDate ? new Date(maxReleaseDate).getFullYear() : ''
-  );
+    return minReleaseDate ? new Date(minReleaseDate).getFullYear() : '';
+  });
+
+  const [maxReleaseYear, setMaxReleaseYear] = useState(() => {
+    const maxReleaseDate = (searchParams.maxReleaseDate as number) || 0;
+
+    return maxReleaseDate ? new Date(maxReleaseDate).getFullYear() : '';
+  });
   const isReleaseFilterActive = minReleaseYear !== '' || maxReleaseYear !== '';
 
   const handleMinReleaseYearChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -122,24 +124,20 @@ const MovieFilters: React.FC<Props> = ({
     updateReleaseDate('maxReleaseDate', newValue);
   };
 
-  const updateReleaseDate = useMemo(
-    () =>
-      debounce((field: string, year: string) => {
-        if (year === '' || /\d{4}/.test(year)) {
-          const timestamp = year ? new Date(`${year}-01-01`).getTime() : null;
-          onSearchParamsUpdates({ updateField: field, updateValue: timestamp });
-          onSearchParamsUpdates({
-            updateField: 'orderField',
-            updateValue: 'releaseDate',
-          });
-        }
-      }, 500),
-    [onSearchParamsUpdates]
-  );
+  const updateReleaseDate = (field: string, year: string) => {
+    if (year === '' || /\d{4}/.test(year)) {
+      const timestamp = year ? new Date(`${year}-01-01`).getTime() : null;
+      onSearchParamsUpdate({ updateField: field, updateValue: timestamp });
+      onSearchParamsUpdate({
+        updateField: 'orderField',
+        updateValue: 'releaseDate',
+      });
+    }
+  };
 
   const orderField = (searchParams.orderField as string) || '';
   const handleOrderFieldChange = (event: SelectChangeEvent) => {
-    onSearchParamsUpdates({
+    onSearchParamsUpdate({
       updateField: 'orderField',
       updateValue: event.target.value,
     });
@@ -147,7 +145,7 @@ const MovieFilters: React.FC<Props> = ({
 
   const orderDir = (searchParams.orderDir as string) || '';
   const handleOrderDirChange = (event: SelectChangeEvent) => {
-    onSearchParamsUpdates({
+    onSearchParamsUpdate({
       updateField: 'orderDir',
       updateValue: event.target.value,
     });

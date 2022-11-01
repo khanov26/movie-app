@@ -12,7 +12,7 @@ import {
 import { AccountCircle, Menu as MenuIcon } from '@mui/icons-material';
 import { Link as RouterLink } from 'react-router-dom';
 import { useAppDispatch } from '../../hooks/store';
-import { logout } from '../../store/auth';
+import { logout } from '../../store/auth/authSlice';
 
 interface Props {
   toggleSidebar: () => void;

@@ -1,7 +1,21 @@
-import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
-import api from '../../services/api';
+import { createSlice } from '@reduxjs/toolkit';
 import { parseJwt } from '../../utils/auth';
-import { AuthState } from './types';
+import { apiSlice } from '../api/apiSlice';
+import { AuthCredentials, AuthState } from './types';
+
+export const extendedApiSlice = apiSlice.injectEndpoints({
+  endpoints: (build) => ({
+    login: build.mutation<AuthState, AuthCredentials>({
+      query: (credentials) => ({
+        url: '/login',
+        method: 'POST',
+        body: credentials,
+      }),
+    }),
+  }),
+});
+
+export const { useLoginMutation } = extendedApiSlice;
 
 function getInitialState(): AuthState | null {
   const userDataStr = localStorage.getItem('user');
@@ -20,18 +34,6 @@ function getInitialState(): AuthState | null {
 
 const initialState = getInitialState();
 
-export const login = createAsyncThunk<
-  AuthState,
-  { email: string; password: string }
->('auth/login', async ({ email, password }, { rejectWithValue }) => {
-  try {
-    const response = await api.post<AuthState>('/login', { email, password });
-    return response.data!;
-  } catch (error) {
-    return rejectWithValue(error);
-  }
-});
-
 const authSlice = createSlice({
   name: 'auth',
   initialState,
@@ -42,21 +44,23 @@ const authSlice = createSlice({
     },
   },
   extraReducers(builder) {
-    builder
-      .addCase(login.fulfilled, (state, action) => {
+    builder.addMatcher(
+      extendedApiSlice.endpoints.login.matchFulfilled,
+      (state, action) => {
         const userData = action.payload;
         const decodedJwt = parseJwt(userData.accessToken);
         const user: AuthState = {
-            ...userData,
-            role: decodedJwt.role,
-            exp: decodedJwt.exp,
+          ...userData,
+          role: decodedJwt.role,
+          exp: decodedJwt.exp,
         };
         localStorage.setItem('user', JSON.stringify(userData));
         return user;
-      });
-  }
+      }
+    );
+  },
 });
 
-export const {logout} = authSlice.actions;
+export const { logout } = authSlice.actions;
 
 export default authSlice.reducer;

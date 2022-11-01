@@ -15,8 +15,8 @@ import { Link as RouterLink, NavLink } from 'react-router-dom';
 import { LiveTv as Logo } from '@mui/icons-material';
 import { Role } from '../../types/role';
 import { useAppDispatch, useAppSelector } from '../../hooks/store';
-import { logout } from '../../store/auth';
-import { fetchUser } from '../../store/user';
+import { logout } from '../../store/auth/authSlice';
+import { useLazyGetUserQuery } from '../../store/user/userSlice';
 
 const Header: React.FC = () => {
   const pages = [
@@ -31,7 +31,7 @@ const Header: React.FC = () => {
   ];
 
   const userAuth = useAppSelector((state) => state.auth);
-  const user = useAppSelector((state) => state.user.entity);
+  const [getUser, { data: user }] = useLazyGetUserQuery();
   const dispatch = useAppDispatch();
 
   const adminPageAccess =
@@ -55,8 +55,8 @@ const Header: React.FC = () => {
     if (!userAuth) {
       return;
     }
-    dispatch(fetchUser(userAuth.id));
-  }, [dispatch, userAuth]);
+    getUser(userAuth.id);
+  }, [getUser, userAuth]);
 
   return (
     <AppBar position="sticky">
@@ -106,7 +106,7 @@ const Header: React.FC = () => {
             </Link>
           )}
 
-          {user && (
+          {userAuth && user && (
             <Box sx={{ ml: 'auto' }}>
               <IconButton onClick={handleOpenUserMenu} sx={{ p: 0 }}>
                 <Avatar src={user.profile} alt={user.name}>

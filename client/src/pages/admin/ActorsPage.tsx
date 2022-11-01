@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Actor } from '../../types/actor';
 import useDialog from '../../hooks/dialog';
 import {
@@ -12,33 +12,37 @@ import { Link } from 'react-router-dom';
 import { Add } from '@mui/icons-material';
 import ActorsGrid from '../../components/admin/ActorsGrid';
 import useSnackbar from '../../hooks/snackbar';
-import { useAppDispatch, useAppSelector } from '../../hooks/store';
-import { deleteActor, fetchActors } from '../../store/actors';
+import {
+  useDeleteActorMutation,
+  useGetActorsQuery,
+} from '../../store/actors/actorsSlice';
+import { parseRTKQueryError } from '../../utils/error';
+import { FetchBaseQueryError } from '@reduxjs/toolkit/query';
+import { SerializedError } from '@reduxjs/toolkit';
 
 const ActorsPage: React.FC = () => {
   const {
-    items: actors,
+    data: actors = [],
     isLoading,
+    isFetching,
+    isError,
     error,
-  } = useAppSelector((state) => state.actors);
+  } = useGetActorsQuery();
 
-  const dispatch = useAppDispatch();
-
-  useEffect(() => {
-    dispatch(fetchActors());
-  }, [dispatch]);
+  const [deleteActor] = useDeleteActorMutation();
 
   const handleActorDelete = (actor: Actor) => {
     const message = `Удалить актера "${actor.name}"?`;
     openDialog(message, async () => {
       try {
-        await dispatch(deleteActor(actor));
+        await deleteActor(actor).unwrap();
         openSnackbar(`Актер "${actor.name}" удален`);
       } catch (error) {
-        if (typeof error === 'string') {
-          openSnackbar(error);
-        } else if (error instanceof Error) {
-          openSnackbar(error.message);
+        if (error) {
+          const errorText = parseRTKQueryError(
+            error as FetchBaseQueryError | SerializedError
+          ) as string;
+          openSnackbar(errorText);
         }
       }
     });
@@ -54,10 +58,20 @@ const ActorsPage: React.FC = () => {
         <CircularProgress />
       </Box>
     );
-  } else if (error) {
-    actorsContent = <Alert severity="error">{error}</Alert>;
+  } else if (isError) {
+    actorsContent = (
+      <Alert severity="error">
+        {parseRTKQueryError(error) as string}
+      </Alert>
+    );
   } else if (actors.length > 0) {
-    actorsContent = <ActorsGrid actors={actors} onDelete={handleActorDelete} />;
+    actorsContent = (
+      <ActorsGrid
+        actors={actors}
+        onDelete={handleActorDelete}
+        disabled={isFetching}
+      />
+    );
   } else {
     actorsContent = <Alert severity="info">Ничего не найдено</Alert>;
   }

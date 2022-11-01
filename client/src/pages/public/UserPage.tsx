@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import {
   Alert,
   Box,
@@ -10,45 +10,32 @@ import {
 } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
 import UserForm from '../../components/public/UserForm';
-import * as userService from '../../services/userService';
 import { User } from '../../types/user';
-import { useAppDispatch, useAppSelector } from '../../hooks/store';
-import { fetchUser } from '../../store/user';
+import { useAppSelector } from '../../hooks/store';
+import {
+  useGetUserQuery,
+  useUpdateUserMutation,
+} from '../../store/user/userSlice';
+import { parseRTKQueryError } from '../../utils/error';
 
 const UserPage: React.FC = () => {
   const userAuth = useAppSelector((state) => state.auth);
+
   const {
-    entity: user,
+    data: user,
     isLoading,
     error: loadingError,
-  } = useAppSelector((state) => state.user);
-  const dispatch = useAppDispatch();
+  } = useGetUserQuery(userAuth!.id);
 
-  useEffect(() => {
-    dispatch(fetchUser(userAuth!.id));
-  }, [dispatch, userAuth]);
+  const [update, { isLoading: isSaving, error: savingError }] =
+    useUpdateUserMutation();
 
-  const [isSaving, setIsSaving] = useState(false);
-  const [savingError, setSavingError] = useState<string>('');
-
-  const handleSave = async (user: User, profileFile: File | null) => {
-    setIsSaving(true);
-    setSavingError('');
-    try {
-      const updateData: User = {
-        id: userAuth!.id,
-        ...user,
-      };
-      await userService.update(updateData, profileFile);
-    } catch (error) {
-      if (typeof error === 'string') {
-        setSavingError(error);
-      } else if (error instanceof Error) {
-        setSavingError(error.message);
-      }
-    } finally {
-      setIsSaving(false);
-    }
+  const handleSave = async (user: User, profile: File | null) => {
+    const updateData: User = {
+      id: userAuth!.id,
+      ...user,
+    };
+    await update({ user: updateData, profile });
   };
 
   return (
@@ -67,14 +54,18 @@ const UserPage: React.FC = () => {
           </Box>
         )}
 
-        {loadingError && <Alert severity="error">{loadingError}</Alert>}
+        {loadingError && (
+          <Alert severity="error">
+            {parseRTKQueryError(loadingError) as string}
+          </Alert>
+        )}
 
         {user && (
           <UserForm user={user} isSaving={isSaving} onSave={handleSave} />
         )}
         {savingError && (
           <Alert severity="error" sx={{ mt: 2 }}>
-            {savingError}
+            {parseRTKQueryError(savingError) as string}
           </Alert>
         )}
       </Container>

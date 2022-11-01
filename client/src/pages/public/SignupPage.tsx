@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   Alert,
   Box,
@@ -10,21 +10,27 @@ import {
 } from '@mui/material';
 import useInput from '../../hooks/input';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
-import * as userService from '../../services/userService';
 import { User } from '../../types/user';
-import { useAppDispatch } from '../../hooks/store';
-import { login } from '../../store/auth';
+import { useLoginMutation } from '../../store/auth/authSlice';
+import { useAddUserMutation } from '../../store/user/userSlice';
+import { parseRTKQueryError } from '../../utils/error';
 
 const SignupPage: React.FC = () => {
   const email = useInput('');
   const name = useInput('');
   const password = useInput('');
 
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
-
   const navigate = useNavigate();
-  const dispatch = useAppDispatch();
+  
+  const [login, { isLoading: isLoginLoading, error: loginError }] =
+    useLoginMutation();
+
+  const [create, { isLoading: isCreateLoading, error: createError }] =
+    useAddUserMutation();
+
+  const isLoading = isLoginLoading || isCreateLoading;
+
+  const error = loginError || createError;
 
   const validateFields = () => {
     return [email.value, name.value, password.value].every(
@@ -35,24 +41,15 @@ const SignupPage: React.FC = () => {
   const canSignup = !isLoading && validateFields();
 
   const handleSubmit = async () => {
-    setError('');
-
-    setIsLoading(true);
     try {
       const newUser: User = {
         name: name.value,
         email: email.value,
       };
-      await userService.create(newUser, password.value);
-      await dispatch(login({ email: email.value, password: password.value }));
+      await create({ user: newUser, password: password.value }).unwrap();
+      await login({ email: email.value, password: password.value }).unwrap();
       navigate('/user/profile', { replace: true });
-    } catch (error) {
-      if (typeof error === 'string') {
-        setError(error);
-      }
-    } finally {
-      setIsLoading(false);
-    }
+    } catch (error) {}
   };
 
   return (
@@ -107,7 +104,7 @@ const SignupPage: React.FC = () => {
 
           {error && (
             <Alert severity="error" sx={{ mt: 2 }}>
-              {error}
+              {parseRTKQueryError(error) as string}
             </Alert>
           )}
 

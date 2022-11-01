@@ -16,10 +16,16 @@ import { Favorite, Grade } from '@mui/icons-material';
 import Section from './Section';
 import { Movie } from '../../types/movie';
 import { red, yellow } from '@mui/material/colors';
-import * as userService from '../../services/userService';
 import { ratingDeclension } from '../../utils/wordDeclension';
 import { getRuntimeLabel } from '../../utils/date';
 import { useAppSelector } from '../../hooks/store';
+import {
+  useAddFavoriteMovieMutation,
+  useLazyGetMovieRatingQuery,
+  useLazyCheckFavoriteMovieQuery,
+  useRemoveFavoriteMovieMutation,
+  useRateMovieMutation,
+} from '../../store/user/userSlice';
 
 interface Props {
   movie: Movie;
@@ -28,7 +34,12 @@ interface Props {
 const MovieInfo: React.FC<Props> = ({ movie }) => {
   const user = useAppSelector((state) => state.auth);
 
-  const [isFavorite, setIsFavorite] = useState(false);
+  const [checkFavoriteMovie, { data: { isFavorite = false } = {} }] =
+    useLazyCheckFavoriteMovieQuery();
+
+  const [addFavoriteMovie] = useAddFavoriteMovieMutation();
+  const [removeFavoriteMovie] = useRemoveFavoriteMovieMutation();
+
   let favoriteButtonText;
   if (user) {
     if (isFavorite) {
@@ -46,14 +57,17 @@ const MovieInfo: React.FC<Props> = ({ movie }) => {
       return;
     }
     if (isFavorite) {
-      userService.removeFavoriteMovie(user.id, movie.id!);
+      removeFavoriteMovie({ userId: user.id, movieId: movie.id! });
     } else {
-      userService.addFavoriteMovie(user.id, movie.id!);
+      addFavoriteMovie({ userId: user.id, movieId: movie.id! });
     }
-    setIsFavorite(!isFavorite);
   };
 
-  const [userRating, setUserRating] = useState<number | null>(null);
+  const [getMovieRating, { data: { rating: userRating = null } = {} }] =
+    useLazyGetMovieRatingQuery();
+
+  const [rateMovie] = useRateMovieMutation();
+
   let rateButtonText;
   if (!user) {
     rateButtonText = 'Войдите для для оценки этого фильма';
@@ -81,29 +95,22 @@ const MovieInfo: React.FC<Props> = ({ movie }) => {
     if (!user) {
       return;
     }
-    userService.rateMovie(user.id, movie.id!, Number(value));
-
-    setUserRating(value);
+    rateMovie({
+      userId: user.id,
+      movieId: movie.id!,
+      userRating: Number(value),
+    });
   };
 
   useEffect(() => {
     if (!user) {
       return;
     }
-    userService
-      .checkFavoriteMovie(user.id, movie.id!)
-      .then(({ isFavorite }) => {
-        setIsFavorite(isFavorite);
-      })
-      .catch(console.error);
+    
+    checkFavoriteMovie({ userId: user.id, movieId: movie.id! });
 
-    userService
-      .getMovieRating(user.id, movie.id!)
-      .then(({ rating }) => {
-        setUserRating(rating);
-      })
-      .catch(console.error);
-  }, [movie.id, user]);
+    getMovieRating({ userId: user.id, movieId: movie.id! });
+  }, [checkFavoriteMovie, getMovieRating, movie.id, user]);
 
   const backgroundColor = 'rgba(0, 0, 0, 0.7)';
 

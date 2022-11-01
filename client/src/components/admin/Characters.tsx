@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from 'react';
 import {
   Alert,
   Box,
@@ -7,43 +7,33 @@ import {
   IconButton,
   InputLabel,
   Typography,
-} from "@mui/material";
-import { Character } from "../../types/character";
-import { Add, Close } from "@mui/icons-material";
-import AddCharacterDialog from "./AddCharacterDialog";
-import { useAppDispatch, useAppSelector } from "../../hooks/store";
+} from '@mui/material';
+import { Character } from '../../types/character';
+import { Add, Close } from '@mui/icons-material';
+import AddCharacterDialog from './AddCharacterDialog';
 import {
-  createCharacter,
-  deleteCharacter,
-  fetchCharacters,
-} from "../../store/characters";
+  useAddCharacterMutation,
+  useDeleteCharacterMutation,
+  useGetCharactersQuery,
+} from '../../store/characters/charactersSlice';
+import { parseRTKQueryError } from '../../utils/error';
 
 interface Props {
   movieId: string;
 }
 
 const Characters: React.FC<Props> = ({ movieId }) => {
-  const dispatch = useAppDispatch();
-
   const {
-    items: characters,
+    data: characters = [],
     isLoading,
+    isError,
     error,
-  } = useAppSelector((state) => state.characters);
+  } = useGetCharactersQuery({ movieId });
 
-  useEffect(() => {
-    dispatch(fetchCharacters({ movieId }));
-  }, [dispatch, movieId]);
+  const [addCharacter, {isLoading: isSaving}] = useAddCharacterMutation();
+  const [deleteCharacter] = useDeleteCharacterMutation();
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-
-  const [isSaving, setIsSaving] = useState(false);
-
-  const handleCreateCharacter = async (character: Character) => {
-    setIsSaving(true);
-    await dispatch(createCharacter(character));
-    setIsSaving(false);
-  };
 
   const handleClickOpenDialog = () => {
     setIsDialogOpen(true);
@@ -54,24 +44,28 @@ const Characters: React.FC<Props> = ({ movieId }) => {
   };
 
   const handleCharacterDeleteClick = (characterToDelete: Character) => () => {
-    dispatch(deleteCharacter(characterToDelete));
+    deleteCharacter(characterToDelete);
   };
 
   let charactersContent;
   if (isLoading) {
     charactersContent = (
-      <Box sx={{ textAlign: "center" }}>
+      <Box sx={{ textAlign: 'center' }}>
         <CircularProgress />
       </Box>
     );
-  } else if (error) {
-    charactersContent = <Alert severity="error">{error}</Alert>;
+  } else if (isError) {
+    charactersContent = (
+      <Alert severity="error">
+        {parseRTKQueryError(error) as string}
+      </Alert>
+    );
   } else if (characters.length > 0) {
     charactersContent = (
       <Box
         sx={{
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr 30px",
+          display: 'grid',
+          gridTemplateColumns: '1fr 1fr 30px',
           gap: 1,
         }}
       >
@@ -86,7 +80,7 @@ const Characters: React.FC<Props> = ({ movieId }) => {
             <IconButton
               size="small"
               title="Удалить"
-              sx={{ ml: "auto" }}
+              sx={{ ml: 'auto' }}
               onClick={handleCharacterDeleteClick(character)}
             >
               <Close fontSize="small" />
@@ -116,7 +110,7 @@ const Characters: React.FC<Props> = ({ movieId }) => {
           sx={{
             border: (theme) => `1px solid ${theme.palette.grey.A400}`,
             borderRadius: 1,
-            position: "absolute",
+            position: 'absolute',
             top: -12,
             bottom: 0,
             left: 0,
@@ -127,16 +121,16 @@ const Characters: React.FC<Props> = ({ movieId }) => {
             zIndex: -1,
           }}
         >
-          <Box component="legend" sx={{ visibility: "hidden" }}>
+          <Box component="legend" sx={{ visibility: 'hidden' }}>
             Роли
           </Box>
         </Box>
         <InputLabel shrink>Роли</InputLabel>
         <Box
           sx={{
-            display: "flex",
-            justifyContent: "flex-end",
-            alignItems: "center",
+            display: 'flex',
+            justifyContent: 'flex-end',
+            alignItems: 'center',
             mb: 1,
           }}
         >
@@ -152,7 +146,7 @@ const Characters: React.FC<Props> = ({ movieId }) => {
         isOpen={isDialogOpen}
         onClose={handleClose}
         isSaving={isSaving}
-        onSave={handleCreateCharacter}
+        onSave={addCharacter}
         movieId={movieId}
       />
     </>

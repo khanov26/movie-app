@@ -1,10 +1,9 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import {
   Autocomplete,
   Box,
   Button,
   CircularProgress,
-  debounce,
   Dialog,
   DialogContent,
   DialogTitle,
@@ -14,9 +13,10 @@ import {
 import useInput from '../../hooks/input';
 import { Close } from '@mui/icons-material';
 import { Actor } from '../../types/actor';
-import * as actorService from '../../services/actorService';
 import { Character } from '../../types/character';
 import { Movie } from '../../types/movie';
+import { useSearchActorsQuery } from '../../store/actors/actorsSlice';
+import useDebounce from '../../hooks/debounce';
 
 interface Props {
   isOpen: boolean;
@@ -34,12 +34,18 @@ const AddCharacterDialog: React.FC<Props> = ({
   movieId,
 }) => {
   const characterName = useInput('');
-  const [actorName, setActorName] = useState('');
-  const [actor, setActor] = useState<Actor | null>(null);
-  const [options, setOptions] = useState<Actor[]>([]);
+
+  const [searchingActorName, setSearchingActorName] = useState('');
+  const actorNameDebounced = useDebounce(searchingActorName, 300);
+
+  const [selectedActor, setSelectedActor] = useState<Actor | null>(null);
+  
+  const { data: options = [] } = useSearchActorsQuery(actorNameDebounced, {
+    skip: !actorNameDebounced || actorNameDebounced === selectedActor?.name,
+  });
 
   const validateField = () => {
-    return [characterName.value, actor].every(
+    return [characterName.value, selectedActor].every(
       (value) => value !== '' && value !== null
     );
   };
@@ -53,7 +59,7 @@ const AddCharacterDialog: React.FC<Props> = ({
 
     const character: Character = {
       name: characterName.value,
-      actor: actor!,
+      actor: selectedActor!,
       movie: { id: movieId } as Movie,
     };
     await onSave(character);
@@ -62,18 +68,9 @@ const AddCharacterDialog: React.FC<Props> = ({
 
   const resetFields = () => {
     characterName.reset();
-    setActorName('');
-    setActor(null);
+    setSearchingActorName('');
+    setSelectedActor(null);
   };
-
-  const searchActors = useMemo(
-    () =>
-      debounce(async (value: string) => {
-        const actors = await actorService.getAll(value);
-        setOptions(actors);
-      }, 300),
-    []
-  );
 
   return (
     <Dialog
@@ -107,20 +104,16 @@ const AddCharacterDialog: React.FC<Props> = ({
             getOptionLabel={(option: Actor) => {
               return option.name;
             }}
-            value={actor}
+            value={selectedActor}
             onChange={(event, value, reason) => {
-              setActor(value);
+              setSelectedActor(value);
             }}
             isOptionEqualToValue={(option, value) => {
               return option.id === value.id;
             }}
-            inputValue={actorName}
+            inputValue={searchingActorName}
             onInputChange={(event, value, reason) => {
-              setActorName(value);
-              if (!value || reason === 'reset') {
-                return;
-              }
-              searchActors(value);
+              setSearchingActorName(value);
             }}
             renderInput={(params) => (
               <TextField required {...params} label="Актер" />

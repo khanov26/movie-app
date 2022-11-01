@@ -1,28 +1,27 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Box, Link, Typography } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
 import { Movie } from '../../types/movie';
-import * as movieService from '../../services/movieService';
 import useSnackbar from '../../hooks/snackbar';
 import MovieForm from '../../components/admin/MovieForm';
 import { FormType } from '../../types/form';
+import { useAddMovieMutation } from '../../store/movies/moviesSlice';
 
 const CreateMoviePage: React.FC = () => {
   const { openSnackbar, snackbar } = useSnackbar();
-  const [isSaving, setIsSaving] = useState(false);
+  const [addMovie, { isLoading: isSaving }] = useAddMovieMutation();
 
   const createMovie = async (
     movie: Movie,
-    posterFile: File | null,
-    backdropFile: File | null
+    poster: File | null,
+    backdrop: File | null
   ) => {
-    setIsSaving(true);
     try {
-      const createdMovie: Movie = await movieService.create(
+      const createdMovie = await addMovie({
         movie,
-        posterFile,
-        backdropFile
-      );
+        poster,
+        backdrop,
+      }).unwrap();
 
       const message = (
         <Typography>
@@ -39,8 +38,6 @@ const CreateMoviePage: React.FC = () => {
       openSnackbar(message);
     } catch (e) {
       openSnackbar('Не удалось создать фильм');
-    } finally {
-      setIsSaving(false);
     }
   };
 

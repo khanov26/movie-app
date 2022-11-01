@@ -3,9 +3,8 @@ import { Box } from '@mui/material';
 import { documentDefaultTitle } from '../../appConfig';
 import SearchBanner from '../../components/public/SearchBanner';
 import MovieTapeSection from '../../components/public/MovieTapeSection';
-import { useAppDispatch, useAppSelector } from '../../hooks/store';
-import { fetchTopRatedMovies } from '../../store/movies/topRatedMovies';
-import { fetchMostPopularMovies } from '../../store/movies/mostPopularMovies';
+import { useGetMoviesQuery } from '../../store/movies/moviesSlice';
+import { parseRTKQueryError } from '../../utils/error';
 
 const topRatedMoviesParams = {
   orderField: 'rating',
@@ -18,26 +17,21 @@ const mostPopularMoviesParams = {
 };
 
 const HomePage: React.FC = () => {
-  const dispatch = useAppDispatch();
-
   const {
-    items: topRatedMovies,
+    data: topRatedMovies = [],
     isLoading: isTopRatedMoviesLoading,
     error: topRatedMoviesError,
-  } = useAppSelector((state) => state.topRatedMovies);
+  } = useGetMoviesQuery(topRatedMoviesParams);
 
   const {
-    items: mostPopularMovies,
+    data: mostPopularMovies = [],
     isLoading: isMostPopularMoviesLoading,
     error: mostPopularMoviesError,
-  } = useAppSelector((state) => state.mostPopularMovies);
+  } = useGetMoviesQuery(mostPopularMoviesParams);
 
   useEffect(() => {
     document.title = documentDefaultTitle;
-
-    dispatch(fetchTopRatedMovies(topRatedMoviesParams));
-    dispatch(fetchMostPopularMovies(mostPopularMoviesParams));
-  }, [dispatch]);
+  }, []);
 
   return (
     <Box component="main">
@@ -47,14 +41,20 @@ const HomePage: React.FC = () => {
         sectionTitle="Фильмы с высоким рейтингом"
         movies={topRatedMovies}
         isLoading={isTopRatedMoviesLoading}
-        error={topRatedMoviesError}
+        error={
+          topRatedMoviesError &&
+          (parseRTKQueryError(topRatedMoviesError) as string)
+        }
       />
 
       <MovieTapeSection
         sectionTitle="Популярные фильмы"
         movies={mostPopularMovies}
         isLoading={isMostPopularMoviesLoading}
-        error={mostPopularMoviesError}
+        error={
+          mostPopularMoviesError &&
+          (parseRTKQueryError(mostPopularMoviesError) as string)
+        }
       />
     </Box>
   );

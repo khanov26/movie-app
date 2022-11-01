@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   Alert,
   Box,
@@ -9,50 +9,43 @@ import {
   Typography,
 } from '@mui/material';
 import { useSearchParams } from 'react-router-dom';
-import * as searchService from '../../services/searchService';
 import SearchForm from '../../components/public/SearchForm';
-import { Movie } from '../../types/movie';
-import { Actor } from '../../types/actor';
 import TabPanel from '../../components/public/TabPanel';
 import MoviesGrid from '../../components/public/MoviesGrid';
 import ActorsGrid from '../../components/public/ActorsGrid';
+import { useSearchQuery } from '../../store/search/searchSlice';
+import { parseRTKQueryError } from '../../utils/error';
 
 const SearchPage: React.FC = () => {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const [searchTerm, setSearchTerm] = useState(
+    () => searchParams.get('query') || ''
+  );
+
+  useEffect(() => {
+    setSearchParams({query: searchTerm});
+  }, [searchTerm, setSearchParams]);
+
+  const { data, isLoading, error, isError } = useSearchQuery(searchTerm, {
+    skip: !searchTerm,
+  });
+  const movies = data ? data.movies : [];
+  const actors = data ? data.actors : [];
 
   const [tabsValue, setTabsValue] = useState('movies');
 
-  const [movies, setMovies] = useState<Movie[]>([]);
-  const [actors, setActors] = useState<Actor[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
-
-  const search = async (queryValue: string) => {
-    setIsLoading(true);
-    try {
-      const { movies, actors } = await searchService.search(queryValue);
-      setMovies(movies);
-      setActors(actors);
-      if (movies.length > 0) {
-        setTabsValue('movies');
-      } else if (actors.length > 0) {
-        setTabsValue('actors');
-      }
-    } catch (error) {
-      if (typeof error === 'string') {
-        setError(error);
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   useEffect(() => {
-    const query = searchParams.get('query');
-    if (query) {
-      search(query);
+    if (movies.length > 0) {
+      setTabsValue('movies');
+    } else if (actors.length > 0) {
+      setTabsValue('actors');
     }
-  }, [searchParams]);
+  }, [actors.length, movies.length]);
+
+  const handleSearchFormSubmit = useCallback((query: string) => {
+    setSearchTerm(query);
+  }, []);
 
   const searchSections = {
     movies: {
@@ -78,10 +71,12 @@ const SearchPage: React.FC = () => {
         <CircularProgress />
       </Box>
     );
-  } else if (error) {
+  } else if (isError) {
     searchContent = (
       <Container>
-        <Alert severity="error">{error}</Alert>
+        <Alert severity="error">
+          {parseRTKQueryError(error) as string}
+        </Alert>
       </Container>
     );
   } else {
@@ -103,7 +98,7 @@ const SearchPage: React.FC = () => {
       <Container sx={{ py: 2 }}>
         <SearchForm
           queryInitialValue={searchParams.get('query') || ''}
-          onSubmit={search}
+          onSubmit={handleSearchFormSubmit}
         />
 
         <Grid container spacing={2} sx={{ mt: 2 }}>

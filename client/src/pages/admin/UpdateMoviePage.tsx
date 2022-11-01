@@ -1,47 +1,40 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import useSnackbar from '../../hooks/snackbar';
-import * as movieService from '../../services/movieService';
 import { Link as RouterLink, useParams } from 'react-router-dom';
 import { Movie } from '../../types/movie';
 import { Alert, Box, CircularProgress, Link, Typography } from '@mui/material';
 import MovieForm from '../../components/admin/MovieForm';
 import { FormType } from '../../types/form';
-import { useAppDispatch, useAppSelector } from '../../hooks/store';
-import { fetchMovie } from '../../store/movie';
+import {
+  useGetMovieQuery,
+  useUpdateMovieMutation,
+} from '../../store/movies/moviesSlice';
+import { parseRTKQueryError } from '../../utils/error';
 
 const UpdateMoviePage: React.FC = () => {
   const { movieId } = useParams();
-  const {
-    entity: movie,
-    isLoading,
-    error,
-  } = useAppSelector((state) => state.movie);
+  const { data: movie, isLoading, error } = useGetMovieQuery(movieId!);
+
+  const [update, { isLoading: isSaving }] = useUpdateMovieMutation();
+
   const { openSnackbar, snackbar } = useSnackbar();
-  const [isSaving, setIsSaving] = useState(false);
-
-  const dispatch = useAppDispatch();
-
-  useEffect(() => {
-    dispatch(fetchMovie(movieId!));
-  }, [dispatch, movieId]);
 
   const updateMovie = async (
     movie: Movie,
     posterFile: File | null,
     backdropFile: File | null
   ) => {
-    setIsSaving(true);
     try {
       const updateData = {
         id: movieId,
         ...movie,
       };
 
-      const updatedMovie: Movie = await movieService.update(
-        updateData,
-        posterFile,
-        backdropFile
-      );
+      const updatedMovie = await update({
+        movie: updateData,
+        poster: posterFile,
+        backdrop: backdropFile,
+      }).unwrap();
 
       const message = (
         <Typography>
@@ -58,8 +51,6 @@ const UpdateMoviePage: React.FC = () => {
       openSnackbar(message);
     } catch (e) {
       openSnackbar('Не удалось изменить фильм');
-    } finally {
-      setIsSaving(false);
     }
   };
 
@@ -82,7 +73,11 @@ const UpdateMoviePage: React.FC = () => {
         </>
       )}
 
-      {error && <Alert severity="error">{error}</Alert>}
+      {error && (
+        <Alert severity="error">
+          {parseRTKQueryError(error) as string}
+        </Alert>
+      )}
 
       {isLoading && (
         <Box sx={{ textAlign: 'center' }}>

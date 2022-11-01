@@ -1,42 +1,33 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import useSnackbar from '../../hooks/snackbar';
 import { Actor } from '../../types/actor';
-import * as actorService from '../../services/actorService';
 import { Alert, Box, CircularProgress, Link, Typography } from '@mui/material';
 import { Link as RouterLink, useParams } from 'react-router-dom';
 import ActorForm from '../../components/admin/ActorForm';
 import { FormType } from '../../types/form';
-import { useAppDispatch, useAppSelector } from '../../hooks/store';
-import { fetchActor } from '../../store/actor';
+import {
+  useGetActorQuery,
+  useUpdateActorMutation,
+} from '../../store/actors/actorsSlice';
+import { parseRTKQueryError } from '../../utils/error';
 
 const UpdateActorPage: React.FC = () => {
   const { actorId } = useParams();
-  const {
-    entity: actor,
-    isLoading,
-    error,
-  } = useAppSelector((state) => state.actor);
+  const { data: actor, isLoading, error } = useGetActorQuery(actorId!);
+  const [update, { isLoading: isSaving }] = useUpdateActorMutation();
   const { openSnackbar, snackbar } = useSnackbar();
-  const [isSaving, setIsSaving] = useState(false);
-
-  const dispatch = useAppDispatch();
-
-  useEffect(() => {
-    dispatch(fetchActor(actorId!));
-  }, [actorId, dispatch]);
 
   const updateActor = async (actor: Actor, profileFile: File | null) => {
-    setIsSaving(true);
     try {
       const updateData = {
         id: actorId,
         ...actor,
       };
 
-      const updatedActor: Actor = await actorService.update(
-        updateData,
-        profileFile
-      );
+      const updatedActor = await update({
+        actor: updateData,
+        profile: profileFile,
+      }).unwrap();
 
       const message = (
         <Typography>
@@ -53,8 +44,6 @@ const UpdateActorPage: React.FC = () => {
       openSnackbar(message);
     } catch (e) {
       openSnackbar('Не удалось обновить актера');
-    } finally {
-      setIsSaving(false);
     }
   };
 
@@ -66,7 +55,11 @@ const UpdateActorPage: React.FC = () => {
         </Box>
       )}
 
-      {error && <Alert severity="error">{error}</Alert>}
+      {error && (
+        <Alert severity="error">
+          {parseRTKQueryError(error) as string}
+        </Alert>
+      )}
 
       {actor && (
         <>

@@ -16,13 +16,17 @@ import { Delete, Edit } from '@mui/icons-material';
 interface Props {
   actors: Actor[];
   onDelete: (actor: Actor) => void;
+  disabled?: boolean;
 }
 
-const ActorsGrid: React.FC<Props> = ({ actors, onDelete }) => {
+const ActorsGrid: React.FC<Props> = ({ actors, onDelete, disabled = false }) => {
   const handleDeleteClick = (actor: Actor) => () => onDelete(actor);
 
   return (
-    <Grid container spacing={2}>
+    <Grid container spacing={2} sx={{
+      opacity: disabled ? 0.5 : 1,
+      pointerEvents: disabled ? 'none' : 'auto',
+    }}>
       {actors.map((actor) => (
         <Grid item key={actor.id}>
           <Card component={Stack} sx={{ width: 150, height: '100%' }}>

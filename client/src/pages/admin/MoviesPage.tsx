@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import {
   Alert,
   Box,
@@ -7,34 +7,28 @@ import {
   Typography,
 } from '@mui/material';
 import { Movie } from '../../types/movie';
-import * as movieService from '../../services/movieService';
 import MovieGrid from '../../components/admin/MovieGrid';
 import { Link } from 'react-router-dom';
 import { Add } from '@mui/icons-material';
 import useDialog from '../../hooks/dialog';
 import useSnackbar from '../../hooks/snackbar';
-import { useAppDispatch, useAppSelector } from '../../hooks/store';
-import { fetchMovies } from '../../store/movies/movies';
+import { useDeleteMovieMutation, useGetMoviesQuery } from '../../store/movies/moviesSlice';
 
 const MoviesPage: React.FC = () => {
-  const dispatch = useAppDispatch();
-
   const {
-    items: movies,
-    isLoading,
+    data: movies = [],
+    isFetching,
+    isError,
     error,
-  } = useAppSelector((state) => state.movies);
+  } = useGetMoviesQuery();
 
-  useEffect(() => {
-    dispatch(fetchMovies());
-  }, [dispatch]);
+  const [deleteMovie] = useDeleteMovieMutation();
 
   const handleMovieDelete = (movie: Movie) => {
     const message = `Удалить фильм "${movie.title}"?`;
     openDialog(message, async () => {
       try {
-        await movieService.deleteById(movie.id!);
-        await dispatch(fetchMovies());
+        await deleteMovie(movie);
         openSnackbar(`Фильм "${movie.title}" удален`);
       } catch (error) {
         if (typeof error === 'string') {
@@ -50,14 +44,14 @@ const MoviesPage: React.FC = () => {
   const { openSnackbar, snackbar } = useSnackbar();
 
   let moviesContent;
-  if (isLoading) {
+  if (isFetching) {
     moviesContent = (
       <Box sx={{ textAlign: 'center' }}>
         <CircularProgress />
       </Box>
     );
-  } else if (error) {
-    moviesContent = <Alert severity="error">{error}</Alert>;
+  } else if (isError) {
+    moviesContent = <Alert severity="error">{error.toString()}</Alert>;
   } else if (movies.length > 0) {
     moviesContent = <MovieGrid movies={movies} onDelete={handleMovieDelete} />;
   } else {

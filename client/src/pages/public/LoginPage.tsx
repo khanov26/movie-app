@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   Alert,
   Box,
@@ -15,8 +15,9 @@ import {
   useNavigate,
   Link as RouterLink,
 } from 'react-router-dom';
-import { useAppDispatch, useAppSelector } from '../../hooks/store';
-import { login } from '../../store/auth';
+import { useAppSelector } from '../../hooks/store';
+import { useLoginMutation } from '../../store/auth/authSlice';
+import { parseRTKQueryError } from '../../utils/error';
 
 interface LocationState {
   from: Location;
@@ -32,14 +33,11 @@ const LoginPage: React.FC = () => {
   const password = useInput('');
 
   const auth = useAppSelector((state) => state.auth);
-  const dispatch = useAppDispatch();
+  const [login, {isLoading, error}] = useLoginMutation();
+  const loginError = error && 'data' in error ? error.data as LoginError : null;
+
   const location = useLocation();
   const navigate = useNavigate();
-
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
-
-  const [loginError, setLoginError] = useState<LoginError | null>(null);
 
   const validateFields = () => {
     return [email.value, password.value].every((value) => value !== '');
@@ -48,25 +46,11 @@ const LoginPage: React.FC = () => {
   const canLogin = !isLoading && validateFields();
 
   const handleSubmit = async () => {
-    setLoginError(null);
-    setError('');
-
-    setIsLoading(true);
     try {
-      await dispatch(
-        login({ email: email.value, password: password.value })
-      ).unwrap();
+      await login({ email: email.value, password: password.value }).unwrap();
       const from = (location.state as LocationState)?.from?.pathname || '/';
       navigate(from, { replace: true });
-    } catch (error) {
-      if (typeof error === 'object' && 'field' in error!) {
-        setLoginError(error);
-      } else if (typeof error === 'string') {
-        setError(error);
-      }
-    } finally {
-      setIsLoading(false);
-    }
+    } catch (error) {}
   };
 
   if (auth) {
@@ -119,9 +103,9 @@ const LoginPage: React.FC = () => {
             }
           />
 
-          {error && (
+          {!loginError && error && (
             <Alert severity="error" sx={{ mt: 2 }}>
-              {error}
+              {parseRTKQueryError(error) as string}
             </Alert>
           )}
 

@@ -7,3 +7,7 @@ export interface AuthState {
   role: Role;
   exp: number;
 }
+export interface AuthCredentials {
+  email: string;
+  password: string;
+}
